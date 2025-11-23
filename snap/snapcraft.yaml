@@ -1,0 +1,39 @@
+name: open-policy-agent
+title: Open Policy Agent
+base: core24
+version: '1.10.1'
+summary: The Open Policy Agent policy engine, opa.
+license: Apache-2.0
+contact:
+  - balachandran.sivakumar@cisogenie.com
+  - https://www.openpolicyagent.org/
+website:
+  - https://www.openpolicyagent.org/
+issues:
+  - https://github.com/open-policy-agent/opa/issues
+source-code: https://github.com/open-policy-agent/opa
+description: |
+  Open Policy Agent (OPA) is an open source, general-purpose policy
+  engine that enables unified, context-aware policy enforcement across
+  the entire stack.
+
+grade: stable 
+confinement: strict
+
+layout:
+  /usr/bin/opa:
+    symlink: $SNAP/bin/opa
+
+parts:
+  opa:
+    plugin: go
+    build-snaps: [go/latest/stable]
+    source: srcs/v1.10.1.zip
+    source-type: zip  
+    source-subdir: opa-1.10.1
+
+apps:
+  opa:
+    command: bin/opa
+    aliases: [opa]  
+    
