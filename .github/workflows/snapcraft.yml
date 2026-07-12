@@ -1,0 +1,63 @@
+name: Release Snap
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # required to check branches properly
+
+      - name: Validate tag format (numeric a.b.c)
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+
+          if ! [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag '$TAG' is not a numeric a.b.c version"
+            exit 1
+          fi
+
+          echo "Tag is valid: $TAG"
+
+      - name: Ensure tag is on main branch
+        run: |
+          TAG_COMMIT=$(git rev-list -n 1 "$GITHUB_REF_NAME")
+
+          if git branch --remote --contains "$TAG_COMMIT" | grep -q "origin/main"; then
+            echo "Tag commit is on main"
+          else
+            echo "Tag commit is NOT on main"
+            exit 1
+          fi
+
+      - name: Run fetch script
+        run: |
+          chmod +x ./fetch.sh
+          ./fetch.sh "$GITHUB_REF_NAME"
+
+      - name: Install Snapcraft
+        run: |
+          sudo snap install snapcraft --classic
+
+      - name: Snapcraft login (CI)
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          snapcraft login --with <(echo "$SNAPCRAFT_STORE_CREDENTIALS")
+
+      - name: Build snap
+        run: |
+          snapcraft pack
+
+      - name: Upload snap to stable
+        run: |
+          SNAP_FILE=$(ls *.snap | head -n 1)
+          echo "Uploading $SNAP_FILE"
+          snapcraft upload --release=stable "$SNAP_FILE"
